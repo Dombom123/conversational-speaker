@@ -115,7 +115,7 @@ namespace ConversationalSpeaker
                 await _player.Play(_notificationSoundFilePath);
 
                 // Say hello on startup
-                await _semanticKernel.RunAsync("Hello!", _speechSkill["Speak"]);
+                await _semanticKernel.RunAsync("Hallo!", _speechSkill["Speak"]);
 
                 // Start listening
                 while (!cancellationToken.IsCancellationRequested)
