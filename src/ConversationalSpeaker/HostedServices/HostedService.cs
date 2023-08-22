@@ -143,11 +143,13 @@ namespace ConversationalSpeaker
                     // Speak the AI's reply
                     await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
 
-                    // If the user said "Goodbye" - stop listening and wait for the wake work again.
-                    if (userSpoke.StartsWith("goodbye", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        break;
-                    }
+                    break;
+
+                    // // If the user said "Goodbye" - stop listening and wait for the wake work again.
+                    // if (userSpoke.StartsWith("goodbye", StringComparison.InvariantCultureIgnoreCase))
+                    // {
+                    //     break;
+                    // }
                 }
             }
         }
