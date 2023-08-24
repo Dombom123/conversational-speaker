@@ -26,6 +26,43 @@ namespace ConversationalSpeaker
         private readonly IChatCompletion _chatCompletion;
         private readonly OpenAIChatHistory _chatHistory;
         private readonly ChatRequestSettings _chatRequestSettings;
+        
+        // random greeting
+        private readonly List<string> _greetings = new List<string>
+        {
+            "Hey!",
+            "Hallo!",
+            "Hi!",
+            "Was gibt's?",
+            "Moin!",
+            "Huhu!",
+            "Na?",
+            "Ja?",
+            "Lang nicht gesehen!",
+            "Schön dich zu sehen!",
+            "Moin!",
+            "Moin moin!",
+            "Guten Tag!",
+            "Guten Morgen!",
+            "Guten Abend!",
+            "Gute Nacht!",
+            "Und, schon viral?",
+            "Emoji des Tages?",
+            "Häschtäg Bist Du Das?",
+            "Neues Meme, wer das?",
+            "Na, du Hashtag Held?",
+            "Meme-Master meldet sich!",
+            "Selfie-Ready?",
+            "Geliked und gesehen!",
+            "Was wird.",
+            "Was geht?",
+            "Was geht ab, Schwester?",
+            "Hey Kquien?",
+
+        };
+        private readonly Random _random = new Random();
+
+
 
         private Task _executeTask;
         private readonly CancellationTokenSource _cancelToken = new();
@@ -115,7 +152,10 @@ namespace ConversationalSpeaker
                 // await _player.Play(_notificationSoundFilePath);
 
                 // Say hello on startup
-                await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
+                // await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
+                string randomGreeting = _greetings[_random.Next(_greetings.Count)];
+                await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
+
 
                 // Start listening
                 while (!cancellationToken.IsCancellationRequested)
