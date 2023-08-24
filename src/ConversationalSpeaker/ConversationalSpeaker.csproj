@@ -40,6 +40,9 @@
     <None Update="Handlers\WakePhrases\hey-janet.table">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Handlers\WakePhrases\hey-darling.table">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

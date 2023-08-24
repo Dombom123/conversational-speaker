@@ -112,10 +112,10 @@ namespace ConversationalSpeaker
                     continue;
                 }
 
-                await _player.Play(_notificationSoundFilePath);
+                // await _player.Play(_notificationSoundFilePath);
 
                 // Say hello on startup
-                await _semanticKernel.RunAsync("Hallo!", _speechSkill["Speak"]);
+                await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
 
                 // Start listening
                 while (!cancellationToken.IsCancellationRequested)
@@ -123,6 +123,7 @@ namespace ConversationalSpeaker
                     // Listen to the user
                     SKContext context = await _semanticKernel.RunAsync(_speechSkill["Listen"]);
                     string userSpoke = context.Result;
+                    await _player.Play(_notificationSoundFilePath);
 
                     // Get a reply from the AI and add it to the chat history.
                     string reply = string.Empty;
@@ -130,16 +131,17 @@ namespace ConversationalSpeaker
                     {
                         _chatHistory.AddUserMessage(userSpoke);
                         reply = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
-
+                        _logger.LogInformation($"GPT Response: {reply}");
                         // Add the interaction to the chat history.
                         _chatHistory.AddAssistantMessage(reply);
+                        
                     }
                     catch (AIException aiex)
                     {
                         _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
                         reply = "OpenAI returned an error. Please try again.";
                     }
-
+                    
                     // Speak the AI's reply
                     await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
 
