@@ -48,7 +48,7 @@ namespace ConversationalSpeaker
             "Gute Nacht!",
             "Und, schon viral?",
             "Emoji des Tages?",
-            "Häschtäg Bist Du Das?",
+            "Hashtag Bist Du Das?",
             "Neues Meme, wer das?",
             "Na, du Hashtag Held?",
             "Meme-Master meldet sich!",
@@ -57,7 +57,7 @@ namespace ConversationalSpeaker
             "Was wird.",
             "Was geht?",
             "Was geht ab, Schwester?",
-            "Hey Kquien?",
+            "Hey, Kquien!",
 
         };
         private readonly Random _random = new Random();
