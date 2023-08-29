@@ -10,6 +10,8 @@ using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using NetCoreAudio;
 using System.Diagnostics;
+using System.Device.Gpio;
+
 
 
 namespace ConversationalSpeaker
@@ -28,6 +30,10 @@ namespace ConversationalSpeaker
         private readonly IChatCompletion _chatCompletion;
         private readonly OpenAIChatHistory _chatHistory;
         private readonly ChatRequestSettings _chatRequestSettings;
+
+        private readonly GpioController _controller = new GpioController();
+        private const int buttonPin = 17; // Change this to your GPIO pin number
+
         
         // random greeting
         private readonly List<string> _greetings = new List<string>
@@ -89,6 +95,9 @@ namespace ConversationalSpeaker
             
             _semanticKernel = semanticKernel;
 
+            _controller.OpenPin(buttonPin, PinMode.InputPullUp);
+
+
             // OpenAI
             _chatRequestSettings = new ChatRequestSettings()
             {
@@ -146,10 +155,12 @@ namespace ConversationalSpeaker
                 await _player.Play(_notificationSoundFilePath);
                 ControlLED("idle");
 
-                // Wait for wake word or phrase
-                if (!await _wakeWordListener.WaitForWakeWordAsync(cancellationToken))
+                // Wait for GPIO button press
+                while (_controller.Read(buttonPin) == PinValue.High)
                 {
-                    continue;
+                    await Task.Delay(100, cancellationToken);  // Poll every 100ms
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
                 }
 
                 // await _player.Play(_notificationSoundFilePath);
