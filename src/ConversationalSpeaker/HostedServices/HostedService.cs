@@ -158,6 +158,7 @@ namespace ConversationalSpeaker
                 // await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
                 string randomGreeting = _greetings[_random.Next(_greetings.Count)];
                 await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
+                ControlLED("listening");
 
 
                 // Start listening
@@ -166,10 +167,10 @@ namespace ConversationalSpeaker
                 {
                     // Listen to the user
                     SKContext context = await _semanticKernel.RunAsync(_speechSkill["Listen"]);
-                    ControlLED("listening");
+                    ControlLED("thinking");
                     string userSpoke = context.Result;
                     await _player.Play(_notificationSoundFilePath);
-                    ControlLED("thinking");
+                    
 
                     // Get a reply from the AI and add it to the chat history.
                     string reply = string.Empty;
