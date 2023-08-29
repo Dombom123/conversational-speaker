@@ -9,6 +9,8 @@ using Microsoft.SemanticKernel.Connectors.AI.OpenAI.ChatCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using NetCoreAudio;
+using System.Diagnostics;
+
 
 namespace ConversationalSpeaker
 {
@@ -142,6 +144,7 @@ namespace ConversationalSpeaker
             {
                 // Play a notification to let the user know we have started listening for the wake phrase.
                 await _player.Play(_notificationSoundFilePath);
+                ControlLED("idle");
 
                 // Wait for wake word or phrase
                 if (!await _wakeWordListener.WaitForWakeWordAsync(cancellationToken))
@@ -158,12 +161,15 @@ namespace ConversationalSpeaker
 
 
                 // Start listening
+
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     // Listen to the user
                     SKContext context = await _semanticKernel.RunAsync(_speechSkill["Listen"]);
+                    ControlLED("listening");
                     string userSpoke = context.Result;
                     await _player.Play(_notificationSoundFilePath);
+                    ControlLED("thinking");
 
                     // Get a reply from the AI and add it to the chat history.
                     string reply = string.Empty;
@@ -182,6 +188,7 @@ namespace ConversationalSpeaker
                     }
                     
                     // Speak the AI's reply
+                    ControlLED("responding");
                     await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
 
                     break;
@@ -210,5 +217,29 @@ namespace ConversationalSpeaker
             _cancelToken.Dispose();
             _wakeWordListener.Dispose();
         }
+        private void ControlLED(string command)
+        {
+            using (var process = new Process())
+            {
+                process.StartInfo.FileName = "sudo";
+                process.StartInfo.Arguments = $"/home/pi/Documents/test/rpi-ws281x-python/examples/led_controller.py {command}";
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.Start();
+
+                // Optionally log any output or errors
+                string output = process.StandardOutput.ReadToEnd();
+                string errors = process.StandardError.ReadToEnd();
+
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    _logger.LogError(errors);
+                }
+
+                process.WaitForExit();
+            }
+        }
+
     }
 }
