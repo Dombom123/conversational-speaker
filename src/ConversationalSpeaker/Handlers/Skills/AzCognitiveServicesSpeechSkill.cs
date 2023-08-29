@@ -40,7 +40,7 @@ namespace ConversationalSpeaker
             speechConfig.SpeechSynthesisVoiceName = _options.SpeechSynthesisVoiceName;
 
             _speechRecognizer = new SpeechRecognizer(speechConfig, _audioConfig);           
-            _speechSynthesizer = new SpeechSynthesizer(speechConfig);
+            _speechSynthesizer = new SpeechSynthesizer(speechConfig, null);
         }
 
         [SKFunction("Listen to the microphone and perform speech-to-text.")]
