@@ -152,7 +152,7 @@ namespace ConversationalSpeaker
             while (!cancellationToken.IsCancellationRequested)
             {
                 // Play a notification to let the user know we have started listening for the wake phrase.
-                await _player.Play(_notificationSoundFilePath);
+                // await _player.Play(_notificationSoundFilePath);
                 ControlLED("idle");
 
                 // Wait for GPIO button press
@@ -180,7 +180,7 @@ namespace ConversationalSpeaker
                     SKContext context = await _semanticKernel.RunAsync(_speechSkill["Listen"]);
                     ControlLED("thinking");
                     string userSpoke = context.Result;
-                    await _player.Play(_notificationSoundFilePath);
+                    // await _player.Play(_notificationSoundFilePath);
                     
 
                     // Get a reply from the AI and add it to the chat history.
