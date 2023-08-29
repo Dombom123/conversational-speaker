@@ -220,10 +220,21 @@ namespace ConversationalSpeaker
         }
         private void ControlLED(string command)
         {
+            // Kill any existing Python LED controller processes
+            foreach (var process in Process.GetProcessesByName("python3"))
+            {
+                if (process.StartInfo.Arguments.Contains("led_controller.py"))
+                {
+                    process.Kill();
+                    process.WaitForExit();
+                }
+            }
+
+            // Start the new LED state
             using (var process = new Process())
             {
                 process.StartInfo.FileName = "sudo";
-                process.StartInfo.Arguments = $"python3 /home/pi/Documents/test/rpi-ws281x-python/examples/led_controller.py -a {command}";
+                process.StartInfo.Arguments = $"python3 /home/pi/Documents/test/rpi-ws281x-python/examples/led_controller.py --action {command}";
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
@@ -241,6 +252,7 @@ namespace ConversationalSpeaker
                 process.WaitForExit();
             }
         }
+
 
     }
 }
