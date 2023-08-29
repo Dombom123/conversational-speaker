@@ -222,7 +222,7 @@ namespace ConversationalSpeaker
             using (var process = new Process())
             {
                 process.StartInfo.FileName = "sudo";
-                process.StartInfo.Arguments = $"python3 /home/pi/Documents/test/rpi-ws281x-python/examples/led_controller.py {command}";
+                process.StartInfo.Arguments = $"python3 /home/pi/Documents/test/rpi-ws281x-python/examples/led_controller.py -a {command}";
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
