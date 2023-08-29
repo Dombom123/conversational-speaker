@@ -171,7 +171,6 @@ namespace ConversationalSpeaker
                     {
                         _chatHistory.AddUserMessage(userSpoke);
                         reply = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
-                        _logger.LogInformation($"GPT Response: {reply}");
                         // Add the interaction to the chat history.
                         _chatHistory.AddAssistantMessage(reply);
                         
