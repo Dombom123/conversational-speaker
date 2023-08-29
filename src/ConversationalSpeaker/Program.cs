@@ -44,6 +44,15 @@ builder.ConfigureServices((context, services) =>
 
     // Add the primary hosted service to start the loop.
     services.AddHostedService<HostedService>();
+    
+    // Register platform-specific implementations
+    #if RASPBERRY_PI
+        services.AddSingleton<IStatusLed, RaspberryPiStatusLed>();
+        services.AddSingleton<IStartTrigger, GpioStartTrigger>();
+    #else
+        services.AddSingleton<IStatusLed, MockStatusLed>();
+        services.AddSingleton<IStartTrigger, KeyboardStartTrigger>();
+    #endif
 });
 
 IHost host = builder.Build();

@@ -9,6 +9,9 @@ using Microsoft.SemanticKernel.Connectors.AI.OpenAI.ChatCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using NetCoreAudio;
+// led and ptt
+using ConversationalSpeaker.PlatformAbstractions;
+
 
 namespace ConversationalSpeaker
 {
@@ -26,6 +29,14 @@ namespace ConversationalSpeaker
         private readonly IChatCompletion _chatCompletion;
         private readonly OpenAIChatHistory _chatHistory;
         private readonly ChatRequestSettings _chatRequestSettings;
+        //led and ptt
+        private IStatusLed _statusLed;
+        private IStartTrigger _startTrigger;
+
+
+        private bool _isTriggered = false;
+
+
         
         // random greeting
         private readonly List<string> _greetings = new List<string>
@@ -87,6 +98,19 @@ namespace ConversationalSpeaker
             
             _semanticKernel = semanticKernel;
 
+            // LED and PTT
+            #if RASPBERRY_PI
+                _statusLed = new RaspberryPiStatusLed();
+                _startTrigger = new GpioStartTrigger();
+            #else
+                _statusLed = new MockStatusLed();
+                _startTrigger = new KeyboardStartTrigger();
+            #endif
+
+            _startTrigger.Triggered += StartTrigger_Triggered;
+
+            
+
             // OpenAI
             _chatRequestSettings = new ChatRequestSettings()
             {
@@ -134,63 +158,63 @@ namespace ConversationalSpeaker
         }
 
         /// <summary>
+        /// LED and PTT
+        /// </summary>
+        private void StartTrigger_Triggered(object sender, EventArgs e)
+        {
+            _isTriggered = true;
+        }
+
+
+
+
+        /// <summary>
         /// Primary service logic loop.
         /// </summary>
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
+            _statusLed.Initialize();  // Light up in blue or any idle color.
+
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Play a notification to let the user know we have started listening for the wake phrase.
                 await _player.Play(_notificationSoundFilePath);
-
-                // Wait for wake word or phrase
-                if (!await _wakeWordListener.WaitForWakeWordAsync(cancellationToken))
+                
+                // Wait for the start trigger
+                await Task.Run(() =>
                 {
-                    continue;
-                }
+                    while (!cancellationToken.IsCancellationRequested && !_isTriggered)
+                    {
+                        Thread.Sleep(100);
+                    }
+                    _isTriggered = false;
+                });
 
-                // await _player.Play(_notificationSoundFilePath);
-
-                // Say hello on startup
-                // await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
+                _statusLed.Listening();  // Change to green or any listening color.
+                
                 string randomGreeting = _greetings[_random.Next(_greetings.Count)];
                 await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
 
-
-                // Start listening
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    // Listen to the user
-                    SKContext context = await _semanticKernel.RunAsync(_speechSkill["Listen"]);
-                    string userSpoke = context.Result;
-                    await _player.Play(_notificationSoundFilePath);
+                    _statusLed.Processing();  // Change to yellow or any processing color.
 
-                    // Get a reply from the AI and add it to the chat history.
-                    string reply = string.Empty;
-                    try
+                    // Your existing logic for capturing user input and getting AI's response...
+
+                    // If there's an error
+                    if (/*error condition*/)
                     {
-                        _chatHistory.AddUserMessage(userSpoke);
-                        reply = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
-                        // Add the interaction to the chat history.
-                        _chatHistory.AddAssistantMessage(reply);
-                        
+                        _statusLed.Error();  // Flash red or any error indication.
                     }
-                    catch (AIException aiex)
+                    else
                     {
-                        _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
-                        reply = "OpenAI returned an error. Please try again.";
+                        _statusLed.ResponseReady();  // Change to cyan or any response color.
                     }
                     
-                    // Speak the AI's reply
+                    // Speak the AI's reply and then reset to idle state
                     await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
+                    _statusLed.Idle();  // Reset to blue or any idle color.
 
                     break;
-
-                    // // If the user said "Goodbye" - stop listening and wait for the wake work again.
-                    // if (userSpoke.StartsWith("goodbye", StringComparison.InvariantCultureIgnoreCase))
-                    // {
-                    //     break;
-                    // }
                 }
             }
         }
