@@ -167,8 +167,8 @@ namespace ConversationalSpeaker
 
                 // Say hello on startup
                 // await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
-                string randomGreeting = _greetings[_random.Next(_greetings.Count)];
-                await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
+                // string randomGreeting = _greetings[_random.Next(_greetings.Count)];
+                // await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
                 ControlLED("listening");
 
 
