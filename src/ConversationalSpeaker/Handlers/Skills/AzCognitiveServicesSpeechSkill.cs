@@ -46,11 +46,15 @@ namespace ConversationalSpeaker
             _speechSynthesizer = new SpeechSynthesizer(speechConfig);
         }
 
+        // Buffer to store the complete recognized text.
+        private StringBuilder _finalRecognizedText = new StringBuilder();
+
         [SKFunction("Start the microphone and perform continuous speech-to-text.")]
         [SKFunctionName("StartListening")]
         public async Task StartListeningAsync(SKContext context)
         {
             _recognizedText.Clear();
+            _finalRecognizedText.Clear();
 
             _speechRecognizer.Recognizing += (s, e) =>
             {
@@ -59,11 +63,13 @@ namespace ConversationalSpeaker
                 _recognizedText.Append(e.Result.Text);
             };
 
-            // Optional: You can handle the final recognized result here if needed.
             _speechRecognizer.Recognized += (s, e) =>
             {
-                // For now, we won't do anything here since the Recognizing event already updates the recognized text.
-                // But you can add any other logic here if needed in the future.
+                if (e.Result.Reason == ResultReason.RecognizedSpeech)
+                {
+                    _finalRecognizedText.Append(e.Result.Text);
+                    _recognizedText.Clear();  // Clear the intermediate buffer after appending to the final text
+                }
             };
 
             _isRecognizing = true;
@@ -80,8 +86,8 @@ namespace ConversationalSpeaker
             _isRecognizing = false;
             await _speechRecognizer.StopContinuousRecognitionAsync();
 
-            _logger.LogInformation($"Recognized: {_recognizedText.ToString()}");
-            return _recognizedText.ToString();
+            _logger.LogInformation($"Recognized: {_finalRecognizedText.ToString()}");
+            return _finalRecognizedText.ToString();
         }
 
 
