@@ -54,8 +54,16 @@ namespace ConversationalSpeaker
 
             _speechRecognizer.Recognizing += (s, e) =>
             {
-                // Update the recognized text with intermediate results
+                // Just store the latest intermediate result without appending
+                _recognizedText.Clear();
                 _recognizedText.Append(e.Result.Text);
+            };
+
+            // Optional: You can handle the final recognized result here if needed.
+            _speechRecognizer.Recognized += (s, e) =>
+            {
+                // For now, we won't do anything here since the Recognizing event already updates the recognized text.
+                // But you can add any other logic here if needed in the future.
             };
 
             _isRecognizing = true;
@@ -75,6 +83,7 @@ namespace ConversationalSpeaker
             _logger.LogInformation($"Recognized: {_recognizedText.ToString()}");
             return _recognizedText.ToString();
         }
+
 
         [SKFunction("Speak the current context (text-to-speech).")]
         [SKFunctionName("Speak")]
