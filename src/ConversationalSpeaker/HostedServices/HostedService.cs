@@ -151,11 +151,9 @@ namespace ConversationalSpeaker
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Play a notification to let the user know we have started listening for the wake phrase.
-                // await _player.Play(_notificationSoundFilePath);
                 ControlLED("idle");
 
-                // Wait for GPIO button press
+                // Wait for GPIO button press to start listening
                 while (_controller.Read(buttonPin) == PinValue.High)
                 {
                     await Task.Delay(100, cancellationToken);  // Poll every 100ms
@@ -163,56 +161,45 @@ namespace ConversationalSpeaker
                         return;
                 }
 
-                // await _player.Play(_notificationSoundFilePath);
-
-                // Say hello on startup
-                // await _semanticKernel.RunAsync("Hey!", _speechSkill["Speak"]);
-                // string randomGreeting = _greetings[_random.Next(_greetings.Count)];
-                // await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
                 ControlLED("listening");
 
+                // Start continuous listening
+                await _semanticKernel.RunAsync(_speechSkill["StartListening"]);
 
-                // Start listening
-
-                while (!cancellationToken.IsCancellationRequested)
+                // Wait for GPIO button release to stop listening
+                while (_controller.Read(buttonPin) == PinValue.Low)
                 {
-                    // Listen to the user
-                    SKContext context = await _semanticKernel.RunAsync(_speechSkill["Listen"]);
-                    ControlLED("thinking");
-                    string userSpoke = context.Result;
-                    // await _player.Play(_notificationSoundFilePath);
-                    
-
-                    // Get a reply from the AI and add it to the chat history.
-                    string reply = string.Empty;
-                    try
-                    {
-                        _chatHistory.AddUserMessage(userSpoke);
-                        reply = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
-                        // Add the interaction to the chat history.
-                        _chatHistory.AddAssistantMessage(reply);
-                        
-                    }
-                    catch (AIException aiex)
-                    {
-                        _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
-                        reply = "OpenAI returned an error. Please try again.";
-                    }
-                    
-                    // Speak the AI's reply
-                    ControlLED("responding");
-                    await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
-
-                    break;
-
-                    // // If the user said "Goodbye" - stop listening and wait for the wake work again.
-                    // if (userSpoke.StartsWith("goodbye", StringComparison.InvariantCultureIgnoreCase))
-                    // {
-                    //     break;
-                    // }
+                    await Task.Delay(100, cancellationToken);  // Poll every 100ms
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
                 }
+
+                ControlLED("thinking");
+
+                // Stop listening and get the recognized text
+                SKContext context = await _semanticKernel.RunAsync(_speechSkill["StopListening"]);
+                string userSpoke = context.Result;
+
+                // Get a reply from the AI and add it to the chat history.
+                string reply = string.Empty;
+                try
+                {
+                    _chatHistory.AddUserMessage(userSpoke);
+                    reply = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
+                    _chatHistory.AddAssistantMessage(reply);
+                }
+                catch (AIException aiex)
+                {
+                    _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
+                    reply = "OpenAI returned an error. Please try again.";
+                }
+
+                // Speak the AI's reply
+                ControlLED("responding");
+                await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
             }
         }
+
 
         /// <summary>
         /// Stop a running service.

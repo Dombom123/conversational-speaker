@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
+using System.Text;  // Required for StringBuilder
 
 namespace ConversationalSpeaker
 {
@@ -16,7 +17,9 @@ namespace ConversationalSpeaker
         private readonly SpeechRecognizer _speechRecognizer;
         private readonly SpeechSynthesizer _speechSynthesizer;
 
-        
+        // Add these class-level variables to manage the state of speech recognition:
+        private readonly StringBuilder _recognizedText = new StringBuilder();
+        private bool _isRecognizing = false;
 
         /// <summary>
         /// Regex for extracting style cues from OpenAI responses.
@@ -43,31 +46,35 @@ namespace ConversationalSpeaker
             _speechSynthesizer = new SpeechSynthesizer(speechConfig);
         }
 
-        [SKFunction("Listen to the microphone and perform speech-to-text.")]
-        [SKFunctionName("Listen")]
-        public async Task<string> ListenAsync(SKContext context)
+        [SKFunction("Start the microphone and perform continuous speech-to-text.")]
+        [SKFunctionName("StartListening")]
+        public async Task StartListeningAsync(SKContext context)
         {
-            while (!context.CancellationToken.IsCancellationRequested)
+            _recognizedText.Clear();
+
+            _speechRecognizer.Recognizing += (s, e) =>
             {
-                _logger.LogInformation("Listening...");
-                SpeechRecognitionResult result = await _speechRecognizer.RecognizeOnceAsync();
-                switch (result.Reason)
-                {
-                    case ResultReason.RecognizedSpeech:
-                        _logger.LogInformation($"Recognized: {result.Text}");
-                        return result.Text;
-                    case ResultReason.Canceled:
-                        _logger.LogWarning($"Speech recognizer session canceled.");
-                        
-                        CancellationDetails cancelDetails = CancellationDetails.FromResult(result);
-                        _logger.LogWarning($"{cancelDetails.Reason}: {cancelDetails.ErrorCode}");
-                        _logger.LogDebug(cancelDetails.ToString());
-                        break;
-                }
-            }
-            return string.Empty;
+                // Update the recognized text with intermediate results
+                _recognizedText.Append(e.Result.Text);
+            };
+
+            _isRecognizing = true;
+            await _speechRecognizer.StartContinuousRecognitionAsync();
         }
-        
+
+        [SKFunction("Stop the microphone and return the recognized text.")]
+        [SKFunctionName("StopListening")]
+        public async Task<string> StopListeningAsync(SKContext context)
+        {
+            if (!_isRecognizing)
+                return string.Empty;
+
+            _isRecognizing = false;
+            await _speechRecognizer.StopContinuousRecognitionAsync();
+
+            return _recognizedText.ToString();
+        }
+
         [SKFunction("Speak the current context (text-to-speech).")]
         [SKFunctionName("Speak")]
         public async Task SpeakAsync(string message, SKContext context)
