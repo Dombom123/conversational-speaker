@@ -72,6 +72,7 @@ namespace ConversationalSpeaker
             _isRecognizing = false;
             await _speechRecognizer.StopContinuousRecognitionAsync();
 
+            _logger.LogInformation($"Recognized: {_recognizedText.ToString()}");
             return _recognizedText.ToString();
         }
 
