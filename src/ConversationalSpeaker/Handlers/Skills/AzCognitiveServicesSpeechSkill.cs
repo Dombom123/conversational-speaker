@@ -56,24 +56,26 @@ namespace ConversationalSpeaker
             _recognizedText.Clear();
             _finalRecognizedText.Clear();
 
-            _speechRecognizer.Recognizing += (s, e) =>
-            {
-                // Just store the latest intermediate result without appending
-                _recognizedText.Clear();
-                _recognizedText.Append(e.Result.Text);
-            };
-
-            _speechRecognizer.Recognized += (s, e) =>
-            {
-                if (e.Result.Reason == ResultReason.RecognizedSpeech)
-                {
-                    _finalRecognizedText.Append(e.Result.Text);
-                    _recognizedText.Clear();  // Clear the intermediate buffer after appending to the final text
-                }
-            };
+            _speechRecognizer.Recognizing += OnRecognizing;
+            _speechRecognizer.Recognized += OnRecognized;
 
             _isRecognizing = true;
             await _speechRecognizer.StartContinuousRecognitionAsync();
+        }
+
+        private void OnRecognizing(object sender, SpeechRecognitionEventArgs e)
+        {
+            _recognizedText.Clear();
+            _recognizedText.Append(e.Result.Text);
+        }
+
+        private void OnRecognized(object sender, SpeechRecognitionEventArgs e)
+        {
+            if (e.Result.Reason == ResultReason.RecognizedSpeech)
+            {
+                _finalRecognizedText.Append(e.Result.Text);
+                _recognizedText.Clear();  // Clear the intermediate buffer after appending to the final text
+            }
         }
 
         [SKFunction("Stop the microphone and return the recognized text.")]
@@ -86,9 +88,14 @@ namespace ConversationalSpeaker
             _isRecognizing = false;
             await _speechRecognizer.StopContinuousRecognitionAsync();
 
+            // Unsubscribe from the events to prevent multiple triggers
+            _speechRecognizer.Recognizing -= OnRecognizing;
+            _speechRecognizer.Recognized -= OnRecognized;
+
             _logger.LogInformation($"Recognized: {_finalRecognizedText.ToString()}");
             return _finalRecognizedText.ToString();
         }
+
 
 
         [SKFunction("Speak the current context (text-to-speech).")]
