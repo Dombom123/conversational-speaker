@@ -39,6 +39,13 @@ namespace ConversationalSpeaker
             "Meme-Master meldet sich!", "Selfie-Ready?", "Geliked und gesehen!", "Was wird.", 
             "Was geht?", "Was geht ab, Schwester?", "Hey, Kquien!"
         };
+        private readonly List<string> _jingles = new List<string>
+        {
+            "Catch the wave with BrandX!",
+            "BrandY - The Choice of a New Generation.",
+            "Have a break, have a BrandZ.",
+            "BrandW - Mmm Mmm Good!"
+        };
         private readonly Random _random = new Random();
         private Task _executeTask;
         private readonly CancellationTokenSource _cancelToken = new();
@@ -190,6 +197,11 @@ namespace ConversationalSpeaker
                     {
                         _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
                         _lastResponse = "OpenAI returned an error. Please try again.";
+                    }
+                    // Logic to append a jingle to the chatbot's response 1/3 of the time
+                    if (_random.NextDouble() < 1.0/3.0)
+                    {
+                        reply += "\n\n" + _jingles[_random.Next(_jingles.Count)];
                     }
                     ControlLED("responding");
                     await _semanticKernel.RunAsync(_lastResponse, _speechSkill["Speak"]);
