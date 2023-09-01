@@ -123,7 +123,6 @@ namespace ConversationalSpeaker
                 else if (command == "greet")
                 {
                     var randomGreeting = _greetings[_random.Next(_greetings.Count)];
-                    Console.WriteLine(randomGreeting);
                     await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
                 }
                 else if (command == "stop")
@@ -138,7 +137,7 @@ namespace ConversationalSpeaker
                 {
                     if (!string.IsNullOrEmpty(_lastResponse))
                     {
-                        Console.WriteLine(_lastResponse);
+                        await _semanticKernel.RunAsync(_lastResponse, _speechSkill["Speak"]);
                     }
                     else
                     {
