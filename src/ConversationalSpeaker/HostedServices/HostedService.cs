@@ -117,7 +117,7 @@ namespace ConversationalSpeaker
                 {
                     var randomGreeting = _greetings[_random.Next(_greetings.Count)];
                     Console.WriteLine(randomGreeting);
-                    await _semanticKernel.RunAsync("Hallo!", _speechSkill["Speak"]);
+                    await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
                 }
                 else if (command == "stop")
                 {
