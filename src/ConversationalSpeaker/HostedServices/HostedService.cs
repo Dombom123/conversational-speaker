@@ -1,4 +1,11 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Device.Gpio;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,79 +16,38 @@ using Microsoft.SemanticKernel.Connectors.AI.OpenAI.ChatCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using NetCoreAudio;
-using System.Diagnostics;
-using System.Device.Gpio;
-
-
 
 namespace ConversationalSpeaker
 {
-    /// <summary>
-    /// A hosted service providing the primary conversation loop for Semantic Kernel with OpenAI ChatGPT.
-    /// </summary>
     internal class HostedService : IHostedService, IDisposable
     {
         private readonly ILogger<HostedService> _logger;
-
-        // Semantic Kernel chat support
         private readonly IKernel _semanticKernel;
         private readonly IDictionary<string, ISKFunction> _speechSkill;
         private readonly AzCognitiveServicesWakeWordListener _wakeWordListener;
         private readonly IChatCompletion _chatCompletion;
         private readonly OpenAIChatHistory _chatHistory;
         private readonly ChatRequestSettings _chatRequestSettings;
-
         private readonly GpioController _controller = new GpioController();
-        private const int buttonPin = 17; // Change this to your GPIO pin number
+        private const int buttonPin = 17;
 
-        
-        // random greeting
         private readonly List<string> _greetings = new List<string>
         {
-            "Hey!",
-            "Hallo!",
-            "Hi!",
-            "Was gibt's?",
-            "Moin!",
-            "Huhu!",
-            "Na?",
-            "Ja?",
-            "Lang nicht gesehen!",
-            "Schön dich zu sehen!",
-            "Moin!",
-            "Moin moin!",
-            "Guten Tag!",
-            "Guten Morgen!",
-            "Guten Abend!",
-            "Gute Nacht!",
-            "Und, schon viral?",
-            "Emoji des Tages?",
-            "Hashtag Bist Du Das?",
-            "Neues Meme, wer das?",
-            "Na, du Hashtag Held?",
-            "Meme-Master meldet sich!",
-            "Selfie-Ready?",
-            "Geliked und gesehen!",
-            "Was wird.",
-            "Was geht?",
-            "Was geht ab, Schwester?",
-            "Hey, Kquien!",
-
+            "Hey!", "Hallo!", "Hi!", "Was gibt's?", "Moin!", "Huhu!", "Na?", "Ja?", 
+            "Lang nicht gesehen!", "Schön dich zu sehen!", "Moin!", "Moin moin!", 
+            "Guten Tag!", "Guten Morgen!", "Guten Abend!", "Gute Nacht!", "Und, schon viral?", 
+            "Emoji des Tages?", "Hashtag Bist Du Das?", "Neues Meme, wer das?", "Na, du Hashtag Held?", 
+            "Meme-Master meldet sich!", "Selfie-Ready?", "Geliked und gesehen!", "Was wird.", 
+            "Was geht?", "Was geht ab, Schwester?", "Hey, Kquien!"
         };
+        
         private readonly Random _random = new Random();
-
-
-
         private Task _executeTask;
         private readonly CancellationTokenSource _cancelToken = new();
-
-        // Notification sound support
         private readonly string _notificationSoundFilePath;
         private readonly Player _player;
+        private string _lastResponse = string.Empty;  // To store the last response for the 'repeat' command
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
         public HostedService(
             AzCognitiveServicesWakeWordListener wakeWordListener,
             IKernel semanticKernel,
@@ -92,13 +58,8 @@ namespace ConversationalSpeaker
             ILogger<HostedService> logger)
         {
             _logger = logger;
-            
             _semanticKernel = semanticKernel;
-
             _controller.OpenPin(buttonPin, PinMode.InputPullUp);
-
-
-            // OpenAI
             _chatRequestSettings = new ChatRequestSettings()
             {
                 MaxTokens = openAIOptions.Value.MaxTokens,
@@ -110,115 +71,127 @@ namespace ConversationalSpeaker
             };
             _semanticKernel.Config.AddOpenAIChatCompletionService(
                 openAIOptions.Value.Model, openAIOptions.Value.Key, alsoAsTextCompletion: true, logger: _logger);
-
-            // Azure OpenAI
-            //_chatRequestSettings = new ChatRequestSettings()
-            //{
-            //    MaxTokens = azureOpenAIOptions.Value.MaxTokens,
-            //    Temperature = azureOpenAIOptions.Value.Temperature,
-            //    FrequencyPenalty = azureOpenAIOptions.Value.FrequencyPenalty,
-            //    PresencePenalty = azureOpenAIOptions.Value.PresencePenalty,
-            //    TopP = azureOpenAIOptions.Value.TopP,
-            //    StopSequences = new string[] { "\n\n" }
-            //};
-            //_semanticKernel.Config.AddAzureChatCompletionService(
-            //    azureOpenAIOptions.Value.Deployment, azureOpenAIOptions.Value.Endpoint, azureOpenAIOptions.Value.Key, alsoAsTextCompletion: true, logger: _logger);
-
             _wakeWordListener = wakeWordListener;
-
             _chatCompletion = _semanticKernel.GetService<IChatCompletion>();
             _chatHistory = (OpenAIChatHistory)_chatCompletion.CreateNewChat(generalOptions.Value.SystemPrompt);
-
             _speechSkill = _semanticKernel.ImportSkill(speechSkill);
-
             _notificationSoundFilePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Handlers", "bing.mp3");
             _player = new Player();
+            
+            // Start the asynchronous CLI reading task
+            _ = ReadCommandsAsync(_cancelToken.Token);
+
         }
 
-        /// <summary>
-        /// Start the service.
-        /// </summary>
+        private async Task ReadCommandsAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var input = Console.ReadLine();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    HandleCommand(input);
+                }
+                await Task.Delay(100); // Prevent a tight loop
+            }
+        }
+
+        private void HandleCommand(string command)
+        {
+            try
+            {
+                if (command.StartsWith("setprompt "))
+                {
+                    var newPrompt = command.Substring("setprompt ".Length);
+                    Console.WriteLine($"System prompt set to: {newPrompt}");
+                }
+                else if (command == "clearlog")
+                {
+                    _chatHistory.Messages.Clear();
+                    Console.WriteLine("Chat log cleared.");
+                }
+
+                else if (command == "repeat")
+                {
+                    if (!string.IsNullOrEmpty(_lastResponse))
+                    {
+                        Console.WriteLine(_lastResponse);
+                    }
+                    else
+                    {
+                        Console.WriteLine("No previous response to repeat.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Unknown command.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing command: {ex.Message}");
+            }
+        }
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _executeTask = ExecuteAsync(_cancelToken.Token);
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Primary service logic loop.
-        /// </summary>
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 ControlLED("idle");
-
-                // Wait for GPIO button press to start listening
                 while (_controller.Read(buttonPin) == PinValue.High)
                 {
-                    await Task.Delay(100, cancellationToken);  // Poll every 100ms
+                    await Task.Delay(100, cancellationToken);  
                     if (cancellationToken.IsCancellationRequested)
                         return;
                 }
-
                 ControlLED("listening");
-
-                // Start continuous listening
                 await _semanticKernel.RunAsync(_speechSkill["StartListening"]);
-
-                // Wait for GPIO button release to stop listening
                 while (_controller.Read(buttonPin) == PinValue.Low)
                 {
-                    await Task.Delay(100, cancellationToken);  // Poll every 100ms
+                    await Task.Delay(100, cancellationToken);
                     if (cancellationToken.IsCancellationRequested)
                         return;
                 }
-
                 ControlLED("thinking");
-
-                // Stop listening and get the recognized text
                 SKContext context = await _semanticKernel.RunAsync(_speechSkill["StopListening"]);
                 string userSpoke = context.Result;
-
-                // Get a reply from the AI and add it to the chat history.
                 string reply = string.Empty;
                 try
                 {
                     _chatHistory.AddUserMessage(userSpoke);
-                    reply = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
-                    _chatHistory.AddAssistantMessage(reply);
+                    _lastResponse = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
+                    _chatHistory.AddAssistantMessage(_lastResponse);
                 }
                 catch (AIException aiex)
                 {
                     _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
-                    reply = "OpenAI returned an error. Please try again.";
+                    _lastResponse = "OpenAI returned an error. Please try again.";
                 }
-
-                // Speak the AI's reply
                 ControlLED("responding");
-                await _semanticKernel.RunAsync(reply, _speechSkill["Speak"]);
+                await _semanticKernel.RunAsync(_lastResponse, _speechSkill["Speak"]);
             }
         }
 
-
-        /// <summary>
-        /// Stop a running service.
-        /// </summary>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _cancelToken.Cancel();
             return Task.CompletedTask;
         }
 
-        /// <inheritdoc/>
         public virtual void Dispose()
         {
             _cancelToken.Dispose();
             _wakeWordListener.Dispose();
         }
+
         private void ControlLED(string command)
         {
-            // Kill any existing Python LED controller processes
             foreach (var process in Process.GetProcessesByName("python3"))
             {
                 if (process.StartInfo.Arguments.Contains("led_controller.py"))
@@ -227,8 +200,6 @@ namespace ConversationalSpeaker
                     process.WaitForExit();
                 }
             }
-
-            // Start the new LED state
             using (var process = new Process())
             {
                 process.StartInfo.FileName = "sudo";
@@ -237,20 +208,14 @@ namespace ConversationalSpeaker
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
                 process.Start();
-
-                // Optionally log any output or errors
                 string output = process.StandardOutput.ReadToEnd();
                 string errors = process.StandardError.ReadToEnd();
-
                 if (!string.IsNullOrEmpty(errors))
                 {
                     _logger.LogError(errors);
                 }
-
                 process.WaitForExit();
             }
         }
-
-
     }
 }
