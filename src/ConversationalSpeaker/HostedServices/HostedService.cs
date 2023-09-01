@@ -30,7 +30,6 @@ namespace ConversationalSpeaker
         private readonly ChatRequestSettings _chatRequestSettings;
         private readonly GpioController _controller = new GpioController();
         private const int buttonPin = 17;
-
         private readonly List<string> _greetings = new List<string>
         {
             "Hey!", "Hallo!", "Hi!", "Was gibt's?", "Moin!", "Huhu!", "Na?", "Ja?", 
@@ -40,13 +39,13 @@ namespace ConversationalSpeaker
             "Meme-Master meldet sich!", "Selfie-Ready?", "Geliked und gesehen!", "Was wird.", 
             "Was geht?", "Was geht ab, Schwester?", "Hey, Kquien!"
         };
-        
         private readonly Random _random = new Random();
         private Task _executeTask;
         private readonly CancellationTokenSource _cancelToken = new();
         private readonly string _notificationSoundFilePath;
         private readonly Player _player;
-        private string _lastResponse = string.Empty;  // To store the last response for the 'repeat' command
+        private string _lastResponse = string.Empty;
+        private bool _shouldRespond = true;
 
         public HostedService(
             AzCognitiveServicesWakeWordListener wakeWordListener,
@@ -77,10 +76,7 @@ namespace ConversationalSpeaker
             _speechSkill = _semanticKernel.ImportSkill(speechSkill);
             _notificationSoundFilePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Handlers", "bing.mp3");
             _player = new Player();
-            
-            // Start the asynchronous CLI reading task
             _ = ReadCommandsAsync(_cancelToken.Token);
-
         }
 
         private async Task ReadCommandsAsync(CancellationToken cancellationToken)
@@ -92,7 +88,7 @@ namespace ConversationalSpeaker
                 {
                     HandleCommand(input);
                 }
-                await Task.Delay(100); // Prevent a tight loop
+                await Task.Delay(100);
             }
         }
 
@@ -105,12 +101,29 @@ namespace ConversationalSpeaker
                     var newPrompt = command.Substring("setprompt ".Length);
                     Console.WriteLine($"System prompt set to: {newPrompt}");
                 }
-                else if (command == "clearlog")
+                else if (command == "clear")
                 {
                     _chatHistory.Messages.Clear();
                     Console.WriteLine("Chat log cleared.");
                 }
-
+                else if (command == "exit")
+                {
+                    Console.WriteLine("Exiting program...");
+                    _cancelToken.Cancel();
+                }
+                else if (command == "greet")
+                {
+                    var randomGreeting = _greetings[_random.Next(_greetings.Count)];
+                    Console.WriteLine(randomGreeting);
+                }
+                else if (command == "stop")
+                {
+                    _shouldRespond = !_shouldRespond;
+                    if (_shouldRespond)
+                        Console.WriteLine("Resuming responses.");
+                    else
+                        Console.WriteLine("Stopped responding.");
+                }
                 else if (command == "repeat")
                 {
                     if (!string.IsNullOrEmpty(_lastResponse))
@@ -146,7 +159,7 @@ namespace ConversationalSpeaker
                 ControlLED("idle");
                 while (_controller.Read(buttonPin) == PinValue.High)
                 {
-                    await Task.Delay(100, cancellationToken);  
+                    await Task.Delay(100, cancellationToken);
                     if (cancellationToken.IsCancellationRequested)
                         return;
                 }
@@ -162,19 +175,22 @@ namespace ConversationalSpeaker
                 SKContext context = await _semanticKernel.RunAsync(_speechSkill["StopListening"]);
                 string userSpoke = context.Result;
                 string reply = string.Empty;
-                try
+                if (_shouldRespond)
                 {
-                    _chatHistory.AddUserMessage(userSpoke);
-                    _lastResponse = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
-                    _chatHistory.AddAssistantMessage(_lastResponse);
+                    try
+                    {
+                        _chatHistory.AddUserMessage(userSpoke);
+                        _lastResponse = await _chatCompletion.GenerateMessageAsync(_chatHistory, _chatRequestSettings);
+                        _chatHistory.AddAssistantMessage(_lastResponse);
+                    }
+                    catch (AIException aiex)
+                    {
+                        _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
+                        _lastResponse = "OpenAI returned an error. Please try again.";
+                    }
+                    ControlLED("responding");
+                    await _semanticKernel.RunAsync(_lastResponse, _speechSkill["Speak"]);
                 }
-                catch (AIException aiex)
-                {
-                    _logger.LogError($"OpenAI returned an error. {aiex.ErrorCode}: {aiex.Message}");
-                    _lastResponse = "OpenAI returned an error. Please try again.";
-                }
-                ControlLED("responding");
-                await _semanticKernel.RunAsync(_lastResponse, _speechSkill["Speak"]);
             }
         }
 
