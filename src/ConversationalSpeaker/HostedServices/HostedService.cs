@@ -86,13 +86,15 @@ namespace ConversationalSpeaker
                 var input = Console.ReadLine();
                 if (!string.IsNullOrEmpty(input))
                 {
-                    HandleCommand(input);
+                    await HandleCommand(input);
                 }
-                await Task.Delay(100);
+                await Task.Delay(100); // Prevent a tight loop
             }
         }
 
-        private void HandleCommand(string command)
+
+        private async Task HandleCommand(string command)
+
         {
             try
             {
@@ -115,6 +117,7 @@ namespace ConversationalSpeaker
                 {
                     var randomGreeting = _greetings[_random.Next(_greetings.Count)];
                     Console.WriteLine(randomGreeting);
+                    await _semanticKernel.RunAsync("Hallo!", _speechSkill["Speak"]);
                 }
                 else if (command == "stop")
                 {
