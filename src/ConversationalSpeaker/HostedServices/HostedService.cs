@@ -30,8 +30,6 @@ namespace ConversationalSpeaker
         private readonly ChatRequestSettings _chatRequestSettings;
         private readonly GpioController _controller = new GpioController();
         private const int buttonPin = 17;
-        private CancellationTokenSource _ledCancellationTokenSource = new CancellationTokenSource();
-
         private readonly List<string> _greetings = new List<string>
         {
             "Hey!", "Hallo!", "Hi!", "Was gibt's?", "Moin!", "Huhu!", "Na?", "Ja?", 
@@ -235,46 +233,30 @@ namespace ConversationalSpeaker
 
         private void ControlLED(string command)
         {
-            // Cancel any ongoing LED animations
-            _ledCancellationTokenSource.Cancel();
-            _ledCancellationTokenSource.Dispose();
-            _ledCancellationTokenSource = new CancellationTokenSource();
-            
-            Task.Run(() =>
+            foreach (var process in Process.GetProcessesByName("python3"))
             {
-                try
+                if (process.StartInfo.Arguments.Contains("led_controller.py"))
                 {
-                    foreach (var process in Process.GetProcessesByName("python3"))
-                    {
-                        if (process.StartInfo.Arguments.Contains("led_controller.py"))
-                        {
-                            process.Kill();
-                            process.WaitForExit();
-                        }
-                    }
-                    using (var process = new Process())
-                    {
-                        process.StartInfo.FileName = "sudo";
-                        process.StartInfo.Arguments = $"python3 /home/pi/Documents/code/conversational-speaker/src/ConversationalSpeaker/led_controller.py --action {command}";
-                        process.StartInfo.UseShellExecute = false;
-                        process.StartInfo.RedirectStandardOutput = true;
-                        process.StartInfo.RedirectStandardError = true;
-                        process.Start();
-                        string output = process.StandardOutput.ReadToEnd();
-                        string errors = process.StandardError.ReadToEnd();
-                        if (!string.IsNullOrEmpty(errors))
-                        {
-                            _logger.LogError(errors);
-                        }
-                        process.WaitForExit();
-                    }
+                    process.Kill();
+                    process.WaitForExit();
                 }
-                catch (OperationCanceledException)
+            }
+            using (var process = new Process())
+            {
+                process.StartInfo.FileName = "sudo";
+                process.StartInfo.Arguments = $"python3 /home/pi/Documents/code/conversational-speaker/src/ConversationalSpeaker/led_controller.py --action {command}";
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.Start();
+                string output = process.StandardOutput.ReadToEnd();
+                string errors = process.StandardError.ReadToEnd();
+                if (!string.IsNullOrEmpty(errors))
                 {
-                    // This exception is expected when the task gets canceled, so no need to handle it
+                    _logger.LogError(errors);
                 }
-            }, _ledCancellationTokenSource.Token);
+                process.WaitForExit();
+            }
         }
-
     }
 }
