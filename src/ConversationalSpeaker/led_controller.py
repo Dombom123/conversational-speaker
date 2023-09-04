@@ -71,7 +71,9 @@ def start_animation(action_func, strip):
     stop_event.set()
     time.sleep(0.5)
     stop_event.clear()
-    threading.Thread(target=action_func, args=(strip,)).start()
+    t = threading.Thread(target=action_func, args=(strip,))
+    t.start()
+    return t
 
 
 if __name__ == '__main__':
@@ -83,16 +85,24 @@ if __name__ == '__main__':
     strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
+    animation_thread = None
     if args.action == 'idle':
-        start_animation(idle_state, strip)
+        animation_thread = start_animation(idle_state, strip)
     elif args.action == 'listening':
-        start_animation(listening_state, strip)
+        animation_thread = start_animation(listening_state, strip)
     elif args.action == 'thinking':
-        start_animation(thinking_state, strip)
+        animation_thread = start_animation(thinking_state, strip)
     elif args.action == 'responding':
-        start_animation(responding_state, strip)
+        animation_thread = start_animation(responding_state, strip)
     elif args.action == 'clear':
         clear_state(strip)
+
+    if animation_thread:
+        try:
+            animation_thread.join()
+        except KeyboardInterrupt:
+            stop_event.set()
+            animation_thread.join()
 
     if args.clear:
         colorWipe(strip, Color(0, 0, 0), 10)
