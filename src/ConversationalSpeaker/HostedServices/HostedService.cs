@@ -41,10 +41,20 @@ namespace ConversationalSpeaker
         };
         private readonly List<string> _jingles = new List<string>
         {
-            "Catch the wave with BrandX!",
-            "BrandY - The Choice of a New Generation.",
-            "Have a break, have a BrandZ.",
-            "BrandW - Mmm Mmm Good!"
+            "Komm zum Boom Konzert am 01.11.2023!",
+            "Abonniere Boom auf Spotify und verpasse keinen Beat!",
+            "Jetzt Boom auf Apple Music streamen und den Rhythmus spüren!",
+            "Kaufe die neue Boom-CD auf Amazon - Lass den Soundtrack deines Lebens beginnen!",
+            "Boom - Das ist Musik, die unter die Haut geht!",
+            "Boom - Hier ist der Beat, der dein Herz höher schlagen lässt!",
+            "Mit Boom wird jede Party zum Hit! Tanze die Nacht durch!",
+            "Lass es krachen mit dem neuesten Album von Boom!",
+            "Boom - Wo Rhythmus und Melodie zu einem Erlebnis verschmelzen!",
+            "Wenn der Bass droppt, weißt du, es ist ein neuer Track von Boom!",
+            "Einschalten, aufdrehen, abheben - mit Boom geht die Party erst richtig los!",
+            "Boom - Mehr als nur Musik, es ist ein Lebensgefühl!",
+            "Erwecke die Nacht mit den Klängen von Boom!",
+            "Boom - Dein Soundtrack für jeden Moment!"
         };
         private readonly Random _random = new Random();
         private Task _executeTask;
