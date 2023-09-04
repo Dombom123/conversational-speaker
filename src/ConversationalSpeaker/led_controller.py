@@ -1,6 +1,7 @@
 import time
 from rpi_ws281x import PixelStrip, Color
 import argparse
+import threading
 
 # LED strip configuration:
 LED_COUNT = 20
@@ -10,6 +11,9 @@ LED_DMA = 10
 LED_BRIGHTNESS = 100
 LED_INVERT = False
 LED_CHANNEL = 0
+
+stop_event = threading.Event()
+
 
 
 def colorWipe(strip, color, wait_ms=50):
@@ -77,29 +81,44 @@ def set_color(strip, color):
     strip.show()
 
 
+# Modified animation functions to continuously run until stop_event is set
 def idle_state(strip):
     """Idle state animation: White wipe."""
-    colorWipe(strip, Color(255, 255, 255))
-
+    while not stop_event.is_set():
+        colorWipe(strip, Color(255, 255, 255), 500)  # Increased delay for visible effect
 
 def listening_state(strip):
     """Listening state: Bright green color."""
-    set_color(strip, Color(0, 255, 0))
-
+    while not stop_event.is_set():
+        set_color(strip, Color(0, 255, 0))
+        time.sleep(0.5)
 
 def thinking_state(strip):
     """Thinking state animation: Green color wipe loop."""
-    set_color(strip, Color(0, 0, 255))
-
-
+    while not stop_event.is_set():
+        set_color(strip, Color(0, 0, 255))
+        time.sleep(0.5)
 
 def responding_state(strip):
     """Responding state animation: Pulsing light in red."""
-    set_color(strip, Color(255, 0, 0))
+    while not stop_event.is_set():
+        set_color(strip, Color(255, 0, 0))
+        time.sleep(0.5)
+
 
 def clear_state(strip):
     """Turn off"""
     set_color(strip, Color(0, 0, 0))
+
+# Function to run animations in separate threads
+def start_animation(action_func, strip):
+    global stop_event
+    # Stop any ongoing animations
+    stop_event.set()
+    time.sleep(0.5)  # Give some time for the previous animation to stop
+    stop_event.clear()
+    # Start the new animation
+    threading.Thread(target=action_func, args=(strip,)).start()
 
 
 if __name__ == '__main__':
@@ -112,13 +131,13 @@ if __name__ == '__main__':
     strip.begin()
 
     if args.action == 'idle':
-        idle_state(strip)
+        start_animation(idle_state, strip)
     elif args.action == 'listening':
-        listening_state(strip)
+        start_animation(listening_state, strip)
     elif args.action == 'thinking':
-        thinking_state(strip)
+        start_animation(thinking_state, strip)
     elif args.action == 'responding':
-        responding_state(strip)
+        start_animation(responding_state, strip)
     elif args.action == 'clear':
         clear_state(strip)
 
