@@ -119,6 +119,7 @@ namespace ConversationalSpeaker
                 {
                     Console.WriteLine("Exiting program...");
                     _cancelToken.Cancel();
+                    Environment.Exit(0);
                 }
                 else if (command == "greet")
                 {
