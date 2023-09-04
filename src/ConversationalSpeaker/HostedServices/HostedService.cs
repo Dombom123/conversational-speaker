@@ -166,21 +166,11 @@ namespace ConversationalSpeaker
             }
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            // Start the ReadCommandsAsync task to continuously read from the console.
-            _ = ReadCommandsAsync(_cancelToken.Token);
-
-            // Automatically execute the greet logic on startup.
-            var randomGreeting = _greetings[_random.Next(_greetings.Count)];
-            await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
-
-            // Start the ExecuteAsync task for button press listening.
-            _ = ExecuteAsync(_cancelToken.Token);
-            
-            return;
+            _executeTask = ExecuteAsync(_cancelToken.Token);
+            return Task.CompletedTask;
         }
-
 
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
