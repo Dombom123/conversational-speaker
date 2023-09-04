@@ -211,7 +211,7 @@ namespace ConversationalSpeaker
                     // Logic to append a jingle to the chatbot's response 1/3 of the time
                     if (_random.NextDouble() < 1.0/3.0)
                     {
-                        _lastResponse += "\n\n" + _jingles[_random.Next(_jingles.Count)];
+                        _lastResponse += "\n\n Werbung:" + _jingles[_random.Next(_jingles.Count)];
                     }
                     ControlLED("responding");
                     await _semanticKernel.RunAsync(_lastResponse, _speechSkill["Speak"]);
