@@ -15,38 +15,14 @@ LED_CHANNEL = 0
 stop_event = threading.Event()
 
 
-
 def colorWipe(strip, color, wait_ms=50):
-    """Wipe color across display a pixel at a time."""
     for i in range(strip.numPixels()):
         strip.setPixelColor(i, color)
         strip.show()
         time.sleep(wait_ms / 1000.0)
 
 
-def theaterChase(strip, color, wait_ms=50):
-    """Movie theater light style chaser animation."""
-    for q in range(3):
-        for i in range(0, strip.numPixels(), 3):
-            strip.setPixelColor(i + q, color)
-        strip.show()
-        time.sleep(wait_ms / 1000.0)
-        for i in range(0, strip.numPixels(), 3):
-            strip.setPixelColor(i + q, 0)
-
-
-def rainbowCycle(strip, wait_ms=20, iterations=1):
-    """Draw rainbow that uniformly distributes itself across all pixels."""
-    for j in range(256 * iterations):
-        for i in range(strip.numPixels()):
-            strip.setPixelColor(i, wheel(
-                (int(i * 256 / strip.numPixels()) + j) & 255))
-        strip.show()
-        time.sleep(wait_ms / 1000.0)
-
-
 def wheel(pos):
-    """Generate rainbow colors across 0-255 positions."""
     if pos < 85:
         return Color(pos * 3, 255 - pos * 3, 0)
     elif pos < 170:
@@ -56,68 +32,45 @@ def wheel(pos):
         pos -= 170
         return Color(0, pos * 3, 255 - pos * 3)
 
-def colorPulse(strip, color, pulse_iterations=3, wait_ms=50):
-    """Pulse a color in and out."""
-    for j in range(pulse_iterations):
-        # Fade in
-        for k in range(0, 256, 10):
-            for i in range(strip.numPixels()):
-                strip.setPixelColor(i, Color(int(color[0] * k / 255), int(color[1] * k / 255), int(color[2] * k / 255)))
-            strip.show()
-            time.sleep(wait_ms / 1000.0)
-
-        # Fade out
-        for k in range(255, -1, -10):
-            for i in range(strip.numPixels()):
-                strip.setPixelColor(i, Color(int(color[0] * k / 255), int(color[1] * k / 255), int(color[2] * k / 255)))
-            strip.show()
-            time.sleep(wait_ms / 1000.0)
-
 
 def set_color(strip, color):
-    """Set the entire strip to a single color."""
     for i in range(strip.numPixels()):
         strip.setPixelColor(i, color)
     strip.show()
 
 
-# Modified animation functions to continuously run until stop_event is set
 def idle_state(strip):
-    """Idle state animation: White wipe."""
     while not stop_event.is_set():
-        colorWipe(strip, Color(255, 255, 255), 500)  # Increased delay for visible effect
+        colorWipe(strip, Color(255, 255, 255), 500)
+
 
 def listening_state(strip):
-    """Listening state: Bright green color."""
     while not stop_event.is_set():
         set_color(strip, Color(0, 255, 0))
         time.sleep(0.5)
 
+
 def thinking_state(strip):
-    """Thinking state animation: Green color wipe loop."""
     while not stop_event.is_set():
         set_color(strip, Color(0, 0, 255))
         time.sleep(0.5)
 
+
 def responding_state(strip):
-    """Responding state animation: Pulsing light in red."""
     while not stop_event.is_set():
         set_color(strip, Color(255, 0, 0))
         time.sleep(0.5)
 
 
 def clear_state(strip):
-    """Turn off"""
     set_color(strip, Color(0, 0, 0))
 
-# Function to run animations in separate threads
+
 def start_animation(action_func, strip):
     global stop_event
-    # Stop any ongoing animations
     stop_event.set()
-    time.sleep(0.5)  # Give some time for the previous animation to stop
+    time.sleep(0.5)
     stop_event.clear()
-    # Start the new animation
     threading.Thread(target=action_func, args=(strip,)).start()
 
 
@@ -143,7 +96,3 @@ if __name__ == '__main__':
 
     if args.clear:
         colorWipe(strip, Color(0, 0, 0), 10)
-
-
-
-
