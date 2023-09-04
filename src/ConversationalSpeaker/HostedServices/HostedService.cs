@@ -223,7 +223,6 @@ namespace ConversationalSpeaker
 
         private void ControlLED(string command)
         {
-            // Stop any running instances of the led_controller.py script
             foreach (var process in Process.GetProcessesByName("python3"))
             {
                 if (process.StartInfo.Arguments.Contains("led_controller.py"))
@@ -232,8 +231,6 @@ namespace ConversationalSpeaker
                     process.WaitForExit();
                 }
             }
-
-            // Start the new command without waiting for it to finish
             using (var process = new Process())
             {
                 process.StartInfo.FileName = "sudo";
@@ -242,11 +239,14 @@ namespace ConversationalSpeaker
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
                 process.Start();
-
-                // If you wish to log the outputs or errors, you can still read from process.StandardOutput or process.StandardError
-                // But do not call process.WaitForExit() here.
+                string output = process.StandardOutput.ReadToEnd();
+                string errors = process.StandardError.ReadToEnd();
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    _logger.LogError(errors);
+                }
+                process.WaitForExit();
             }
-
         }
     }
 }
