@@ -79,7 +79,7 @@ def set_color(strip, color):
 
 def idle_state(strip):
     """Idle state animation: White wipe."""
-    colorWipe(strip, Color(255, 255, 255))
+    set_color(strip, Color(255, 255, 255))
 
 
 def listening_state(strip):
