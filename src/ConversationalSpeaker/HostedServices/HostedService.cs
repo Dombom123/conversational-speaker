@@ -168,15 +168,14 @@ namespace ConversationalSpeaker
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _executeTask = ExecuteAsync(_cancelToken.Token);
+            _ = ReadCommandsAsync(_cancelToken.Token);
+            _ = ExecuteAsync(_cancelToken.Token);
             return Task.CompletedTask;
         }
 
+
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var randomGreeting = _greetings[_random.Next(_greetings.Count)];
-            await _semanticKernel.RunAsync(randomGreeting, _speechSkill["Speak"]);
-
             while (!cancellationToken.IsCancellationRequested)
             {
                 ControlLED("idle");
