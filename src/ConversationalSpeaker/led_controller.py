@@ -82,25 +82,33 @@ def set_color(strip, color):
 
 def idle_state(strip):
     """Idle state animation: Rainbow cycle to show standby."""
-    rainbowCycle(strip)
+    while not stop_event.is_set():
+        rainbowCycle(strip)
 
 def listening_state(strip):
     """Listening state: Theater chase in green to show active listening."""
-    theaterChase(strip, Color(0, 255, 0))
+    while not stop_event.is_set():
+        theaterChase(strip, Color(0, 255, 0))
 
 def thinking_state(strip):
     """Thinking state animation: Color pulse in blue to show processing."""
-    colorPulse(strip, [0, 0, 255])
+    while not stop_event.is_set():
+        colorPulse(strip, [0, 0, 255])
 
 def responding_state(strip):
     """Responding state animation: Theater chase in red to show response."""
-    theaterChase(strip, Color(255, 0, 0))
+    while not stop_event.is_set():
+        theaterChase(strip, Color(255, 0, 0))
 
 def clear_state(strip):
     """Clear state: Turn off all the LEDs."""
     set_color(strip, Color(0, 0, 0))
+    stop_event.set()
 
 def led_controller(action):
+    global stop_event
+    stop_event.clear()  # Reset the stop event
+
     strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
@@ -114,7 +122,6 @@ def led_controller(action):
         responding_state(strip)
     elif action == 'clear':
         clear_state(strip)
-        stop_event.set()
 
     # If you want the clear animation to also turn off the LEDs at the end, uncomment the following:
     # colorWipe(strip, Color(0, 0, 0), 10)
