@@ -1,4 +1,5 @@
 import time
+import threading
 from rpi_ws281x import PixelStrip, Color
 import argparse
 
@@ -11,6 +12,8 @@ LED_BRIGHTNESS = 100
 LED_INVERT = False
 LED_CHANNEL = 0
 
+# Global event for stopping the thread
+stop_event = threading.Event()
 
 def colorWipe(strip, color, wait_ms=50):
     """Wipe color across display a pixel at a time."""
@@ -78,44 +81,49 @@ def set_color(strip, color):
 
 
 def idle_state(strip):
-    """Idle state animation: White wipe."""
-    colorWipe(strip, Color(255, 255, 255))
-
+    """Idle state animation: Rainbow cycle to show standby."""
+    rainbowCycle(strip)
 
 def listening_state(strip):
-    """Listening state: Bright green color."""
-    set_color(strip, Color(0, 255, 0))
-
+    """Listening state: Theater chase in green to show active listening."""
+    theaterChase(strip, Color(0, 255, 0))
 
 def thinking_state(strip):
-    """Thinking state animation: Green color wipe loop."""
-    set_color(strip, Color(0, 0, 255))
-
-
+    """Thinking state animation: Color pulse in blue to show processing."""
+    colorPulse(strip, [0, 0, 255])
 
 def responding_state(strip):
-    """Responding state animation: Pulsing light in red."""
-    set_color(strip, Color(255, 0, 0))
+    """Responding state animation: Theater chase in red to show response."""
+    theaterChase(strip, Color(255, 0, 0))
 
+def clear_state(strip):
+    """Clear state: Turn off all the LEDs."""
+    set_color(strip, Color(0, 0, 0))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--clear', action='store_true', help='clear the display on exit')
-    parser.add_argument('-a', '--action', type=str, help='LED action to perform', required=True)
-    args = parser.parse_args()
-
+def led_controller(action):
     strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
-    if args.action == 'idle':
+    if action == 'idle':
         idle_state(strip)
-    elif args.action == 'listening':
+    elif action == 'listening':
         listening_state(strip)
-    elif args.action == 'thinking':
+    elif action == 'thinking':
         thinking_state(strip)
-    elif args.action == 'responding':
+    elif action == 'responding':
         responding_state(strip)
+    elif action == 'clear':
+        clear_state(strip)
+        stop_event.set()
 
-    if args.clear:
-        colorWipe(strip, Color(0, 0, 0), 10)
+    # If you want the clear animation to also turn off the LEDs at the end, uncomment the following:
+    # colorWipe(strip, Color(0, 0, 0), 10)
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--action', type=str, help='LED action to perform', required=True)
+    args = parser.parse_args()
+
+    thread = threading.Thread(target=led_controller, args=(args.action,))
+    thread.start()
+    thread.join()  # This will ensure the main thread waits for the animation thread to complete
