@@ -41,21 +41,22 @@ namespace ConversationalSpeaker
         };
         private readonly List<string> _jingles = new List<string>
         {
-            "Komm zum Boom Konzert am 01.11.2023!",
-            "Abonniere Boom auf Spotify und verpasse keinen Beat!",
-            "Jetzt Boom auf Apple Music streamen und den Rhythmus spüren!",
-            "Kaufe die neue Boom-CD auf Amazon - Lass den Soundtrack deines Lebens beginnen!",
-            "Boom - Das ist Musik, die unter die Haut geht!",
-            "Boom - Hier ist der Beat, der dein Herz höher schlagen lässt!",
-            "Mit Boom wird jede Party zum Hit! Tanze die Nacht durch!",
-            "Lass es krachen mit dem neuesten Album von Boom!",
-            "Boom - Wo Rhythmus und Melodie zu einem Erlebnis verschmelzen!",
-            "Wenn der Bass droppt, weißt du, es ist ein neuer Track von Boom!",
-            "Einschalten, aufdrehen, abheben - mit Boom geht die Party erst richtig los!",
-            "Boom - Mehr als nur Musik, es ist ein Lebensgefühl!",
-            "Erwecke die Nacht mit den Klängen von Boom!",
-            "Boom - Dein Soundtrack für jeden Moment!"
+            "Der nächste SpaDo steht an! Jetzt dabei sein und mitmachen!",
+            "Folge drive beta und verpasse keine Neuigkeit!",
+            "Jetzt die neuesten Produktionen von drive beta erleben!",
+            "Schau die neusten Filme von drive beta - Lass die Revolution beginnen!",
+            "drive beta - Das ist Innovation, die unter die Haut geht!",
+            "drive beta - Hier beginnt die nächste Stufe der Produktion!",
+            "Mit drive beta wird jedes Projekt zum Hit! Verwirkliche deine Visionen!",
+            "Erlebe die Zukunft mit den neuesten Produktionen von drive beta!",
+            "drive beta - Wo Technik und Kreativität zu einem Erlebnis verschmelzen!",
+            "Wenn die Maschinen starten, weißt du, es ist eine Produktion von drive beta!",
+            "Einschalten, staunen, begeistert sein - mit drive beta wird jede Idee Wirklichkeit!",
+            "drive beta - Mehr als nur Produktion, es ist ein Lebensgefühl!",
+            "Erwecke die Zukunft mit den Visionen von drive beta!",
+            "drive beta - Cooler Content für jeden Moment!"
         };
+
         private readonly Random _random = new Random();
         private Task _executeTask;
         private readonly CancellationTokenSource _cancelToken = new();
